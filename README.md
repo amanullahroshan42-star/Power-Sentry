@@ -1,4 +1,4 @@
-# PowerSentry-DC ⚡🛡️
+# PowerSentry ⚡🛡️
 ### Real-Time IEC 61000-4-30 Class A Power Quality Analyzer & ITIC Ride-Through Sentinel for High-Density Data Centers
 
 [![Microchip PolarFire SoC](https://img.shields.io/badge/Microchip-PolarFire%20SoC%20Icicle%20Kit-blue.svg)](https://www.microchip.com/en-us/development-tool/mpfs-icicle-kit)
@@ -12,7 +12,7 @@
 
 ## 🏛️ System Architecture
 
-![PowerSentry-DC Architecture Block Diagram](docs/SYSTEM_BLOCK_DIAGRAM.png)
+![PowerSentry Architecture Block Diagram](docs/SYSTEM_BLOCK_DIAGRAM.png)
 
 > 📄 **Official Submission Document:** Download the publication-grade [System Block Diagram (PDF)](docs/SYSTEM_BLOCK_DIAGRAM.pdf).
 
@@ -22,7 +22,7 @@
 
 As AI/ML and HPC clusters push data center rack densities past 40–100 kW, electrical infrastructure faces two under-monitored risks. Standard Multi-Function Meters average voltage over 1-second to 10-minute windows, making them blind to brief voltage sags that breach ITIC/SEMI-F47 tolerance curves — these events deplete server power-supply holdup capacitors, triggering simultaneous multi-rack reboots with no forensic record of the cause. Separately, non-linear server power supplies inject triplen harmonics (3rd, 9th, 15th) that sum additively in the neutral conductor of 4-wire distribution systems rather than canceling, often reaching 140–170% of phase current — creating overheating and fire risk invisible to standard phase-only breaker monitoring.
 
-PowerSentry-DC addresses both gaps on the Microchip PolarFire SoC Icicle Kit (MPFS250T). An 8-channel simultaneous-sampling AD7606 ADC feeds a deterministic FPGA DSP pipeline that recalculates sliding half-cycle RMS on every sample (10.24 kS/s), comparing live voltage against ITIC/SEMI-F47 curves and triggering a sub-10-microsecond hardware interrupt for protective shedding or UPS transfer before servers crash. A parallel 1024-point FFT pipeline computes harmonics to the 63rd order, true THD, and dynamic transformer K-factor, while directional harmonic power flow distinguishes utility-side pollution from internally generated server harmonics. Pre/post-fault waveforms are captured via on-chip LSRAM and DMA-streamed to LPDDR4 for forensic review.
+PowerSentry addresses both gaps on the Microchip PolarFire SoC Icicle Kit (MPFS250T). An 8-channel simultaneous-sampling AD7606 ADC feeds a deterministic FPGA DSP pipeline that recalculates sliding half-cycle RMS on every sample (10.24 kS/s), comparing live voltage against ITIC/SEMI-F47 curves and triggering a sub-10-microsecond hardware interrupt for protective shedding or UPS transfer before servers crash. A parallel 1024-point FFT pipeline computes harmonics to the 63rd order, true THD, and dynamic transformer K-factor, while directional harmonic power flow distinguishes utility-side pollution from internally generated server harmonics. Pre/post-fault waveforms are captured via on-chip LSRAM and DMA-streamed to LPDDR4 for forensic review.
 
 A RISC-V AMP subsystem splits work cleanly: one FreeRTOS core handles deterministic event logging and Modbus-TCP for SCADA/PLC integration, while Linux cores host a web dashboard and MQTT gateway. Estimated FPGA resource utilization is under 10% across logic and DSP blocks, indicating strong feasibility within the contest timeline, with total additional prototype hardware cost under $40.
 
@@ -32,7 +32,7 @@ A RISC-V AMP subsystem splits work cleanly: one FreeRTOS core handles determinis
 
 Commercial Class A power-quality analyzers rely on sequential microcontroller or multi-chip DSP+MCU architectures that struggle to sustain simultaneous multi-channel sampling, sliding RMS, FFT decomposition, and continuous oscillography without buffer overruns — and typically cost thousands of dollars per monitoring point, limiting deployment to a few shared panels per facility.
 
-PowerSentry-DC's innovation is architectural: implementing the full DSP pipeline as deterministic, zero-jitter hardware logic on PolarFire's FPGA fabric, rather than software on a sequential processor, achieves hard real-time, sub-10-microsecond fault response at an embedded, low-cost footprint (under $40 in additional hardware beyond the kit). This shifts power-quality monitoring from a handful of expensive, centrally located instruments toward dense, per-rack or per-PDU deployment.
+PowerSentry's innovation is architectural: implementing the full DSP pipeline as deterministic, zero-jitter hardware logic on PolarFire's FPGA fabric, rather than software on a sequential processor, achieves hard real-time, sub-10-microsecond fault response at an embedded, low-cost footprint (under $40 in additional hardware beyond the kit). This shifts power-quality monitoring from a handful of expensive, centrally located instruments toward dense, per-rack or per-PDU deployment.
 
 A key differentiator is directional harmonic active-power-flow calculation, which distinguishes utility-grid-origin pollution from internally generated server harmonics — letting facilities teams pinpoint root cause rather than merely detect symptoms, a diagnostic capability standard panel meters lack. Validation combines a Python/NumPy golden model of the IEC 61000-4-30 formulas (targeting agreement within 0.1% of the reference), recorded real-world fault playback (COMTRADE/PQDIF), and physical low-voltage benchtop testing — demonstrating rigor without requiring live high-voltage facility access.
 
@@ -44,7 +44,7 @@ Potential impact spans preventing costly multi-rack reboot events, reducing neut
 
 Targeted for the **Microchip PolarFire SoC Icicle Kit (`MPFS250T-FCVG484E`)**:
 
-| Resource Type | Available on Device | Used by PowerSentry-DC | Utilization % | Feasibility Status |
+| Resource Type | Available on Device | Used by PowerSentry | Utilization % | Feasibility Status |
 | :--- | :---: | :---: | :---: | :---: |
 | **Logic Elements (4-LUT + DFF)** | **254,000** | ~16,500 | **6.5%** | ✅ Massive Headroom |
 | **Math Blocks (18x18 Multipliers)** | **784** | ~56 | **7.1%** | ✅ Concurrency Guaranteed |
@@ -58,7 +58,7 @@ Targeted for the **Microchip PolarFire SoC Icicle Kit (`MPFS250T-FCVG484E`)**:
 
 ## 🧪 Verification & Testing Strategy
 
-Judges and evaluators can verify PowerSentry-DC completely within a laboratory or desktop environment without requiring access to live high-voltage data centers:
+Judges and evaluators can verify PowerSentry completely within a laboratory or desktop environment without requiring access to live high-voltage data centers:
 
 1. **Python Golden Model:** Double-precision reference model validating IEC 61000-4-30 formulas and ITIC boundaries against ModelSim RTL simulations targeting < 0.1% error.
 2. **On-Chip HIL Playback:** Pre-stored real data center IEEE COMTRADE disturbance records compiled into FPGA block ROM. Board push-buttons simulate 5-cycle sags, capacitor switching spikes, and neutral current surges on demand.
@@ -74,7 +74,7 @@ Judges and evaluators can verify PowerSentry-DC completely within a laboratory o
 * **Phase 2 (Jan 2027):** Pipelined 1024-pt FFT harmonic decomposition (up to 63rd order) and circular LSRAM oscillogram buffer.
 * **Phase 3 (Feb 2027):** PolarFire SoC Icicle Kit AMP integration: FreeRTOS sub-10µs ISR, Linux web dashboard, and Modbus-TCP telemetry.
 * **Phase 4 (Mar 27, 2027):** Final submission: comprehensive 10-page documentation, full source code release, and 3–5 minute high-definition demonstration video.
-* **Phase 5 (May 15, 2027):** Winner announcements.
+
 
 ---
 
