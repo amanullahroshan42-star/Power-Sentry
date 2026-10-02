@@ -10,74 +10,39 @@
 
 ---
 
-## 📌 Executive Overview
-
-**PowerSentry-DC** is an FPGA-accelerated, deterministic Power Quality (PQ) analyzer and ITIC/SEMI-F47 ride-through sentinel engineered for the **Microchip–DigiKey PolarFire® FPGA Design Contest 2026–27** under **Track 2: Connected Real-Time Systems**.
-
-Modern hyperscale and AI data centers house thousands of non-linear Server Power Supply Units (PSUs) operating at power densities exceeding 40 kW to 100 kW per rack. Standard Multi-Function Meters (MFMs) fail in these environments because they calculate RMS values over 1-second to 10-minute averaging windows. They are completely blind to **5-to-10 cycle voltage sags** that crash server racks, and they fail to monitor **reverse triplen harmonics ($3^{rd}, 9^{th}, 15^{th}$)** that sum additively in the neutral conductor, causing severe transformer overheating and electrical fire hazards.
-
-Implemented on the **PolarFire SoC Icicle Kit (`MPFS250T`)**, PowerSentry-DC unites hardware DSP pipelining with a 5-core 64-bit RISC-V Asymmetric Multiprocessing (AMP) architecture to provide sub-cycle event detection, Class A measurement accuracy, and real-time cloud/SCADA telemetry.
-
----
-
 ## 🏛️ System Architecture
 
 ![PowerSentry-DC Architecture Block Diagram](docs/SYSTEM_BLOCK_DIAGRAM.png)
 
-> 📄 **Official Contest Submission File:** Download the publication-grade [System Block Diagram PDF](docs/SYSTEM_BLOCK_DIAGRAM.pdf).
-
-### Architectural Breakdown
-
-```mermaid
-flowchart LR
-    subgraph AFE["1. Analog Front-End"]
-        grid["3-Phase Mains + N + E<br/>(Va, Vb, Vc, Ia, Ib, Ic, In, Ie)"] --> pt_ct["PT / CT Attenuation &<br/>Anti-Aliasing Filter"]
-        pt_ct --> adc["AD7606 8-Channel ADC<br/>(16-Bit @ 10.24 kS/s)"]
-    end
-
-    subgraph FPGA["2. PolarFire SoC FPGA Fabric (MPFS250T)"]
-        adc -->|"40-Pin RPi Header<br/>(3.3V GPIO)"| adc_ctrl["ADC Master Controller &<br/>Deserializer"]
-        adc_ctrl --> dpll["Zero-Crossing & DPLL"]
-        adc_ctrl --> rms["Sliding Half-Cycle RMS Engine<br/>Urms(1/2) & Irms(1/2)"]
-        rms --> itic["ITIC / SEMI-F47<br/>Curve Comparator"]
-        rms --> fft["Pipelined 1024-pt FFT<br/>(1st to 63rd Harmonics)"]
-        adc_ctrl --> osc_buf["100-Cycle Circular LSRAM<br/>Fault Oscillogram Buffer"]
-        hil["On-Chip HIL Playback ROM<br/>(COMTRADE Fault Synthesizer)"] -.->|"Push-Button Trigger"| rms
-    end
-
-    subgraph MSS["3. RISC-V Microprocessor Subsystem (AMP)"]
-        itic -->|"Sub-10µs Hard IRQ"| core1["Core 1: U54 (FreeRTOS)<br/>• Hard Real-Time ISR<br/>• Modbus-TCP Server<br/>• High-Precision Event Logger"]
-        fft & osc_buf -->|"AXI4-Lite & DMA"| linux_cluster["Cores 2-4: U54 (Embedded Linux)<br/>• NGINX Web Dashboard & WebSockets<br/>• SQLite Historical PQ Database<br/>• Cloud MQTT Gateway (AWS/ThingsBoard)"]
-        core0["Core 0: E51 (Monitor Core)<br/>• Bootloader & Health Monitor<br/>• PAC1934 I2C Power Telemetry"]
-    end
-
-    subgraph DCIM["4. Network & Facilities SCADA"]
-        core1 -->|"GbE Port 0"| scada["Modbus-TCP / SCADA / BMS"]
-        linux_cluster -->|"GbE Port 1"| cloud["Browser Dashboard / Cloud DCIM"]
-    end
-```
+> 📄 **Official Submission Document:** Download the publication-grade [System Block Diagram (PDF)](docs/SYSTEM_BLOCK_DIAGRAM.pdf).
 
 ---
 
-## ⚡ Key Capabilities & Innovations
+## 📌 Project Overview
 
-| Feature | Conventional Data Center Meters | PowerSentry-DC (PolarFire SoC) |
-| :--- | :--- | :--- |
-| **Measurement Standard** | Non-standard, manufacturer proprietary | **IEC 61000-4-30 Class A** certifiable |
-| **Sag / Swell Detection Speed** | 1.0 to 10.0 seconds (misses 95% of server dips) | **< 10 milliseconds** (Sliding single-sample RMS update) |
-| **Server Protection** | Reactive (post-crash investigation) | **Proactive ITIC Curve Mask** (Sub-10µs trip interrupt) |
-| **Harmonic Spectrum** | Up to 15th or 31st order | **Up to 63rd order** (Pipelined 1024-pt FFT, 3.15 kHz) |
-| **Neutral Conductor Protection** | Unmonitored or phase-averaged only | **Zero-sequence triplen sum & Dynamic K-Factor** |
-| **Harmonic Directionality** | Scalar magnitude only | **Directional active power flow** (Source vs. Victim identification) |
-| **Event Oscillography** | None or low-resolution snapshots | **100-Cycle pre/post-trigger raw waveform capture** |
-| **System Architecture** | Single-core MCU (overrun risks) | **Heterogeneous AMP** (FPGA DSP + FreeRTOS + Linux) |
-| **Power Profile** | High thermal dissipation (15–30W) | **Ultra-low power flash FPGA (< 3W total kit)** |
+As AI/ML and HPC clusters push data center rack densities past 40–100 kW, electrical infrastructure faces two under-monitored risks. Standard Multi-Function Meters average voltage over 1-second to 10-minute windows, making them blind to brief voltage sags that breach ITIC/SEMI-F47 tolerance curves — these events deplete server power-supply holdup capacitors, triggering simultaneous multi-rack reboots with no forensic record of the cause. Separately, non-linear server power supplies inject triplen harmonics (3rd, 9th, 15th) that sum additively in the neutral conductor of 4-wire distribution systems rather than canceling, often reaching 140–170% of phase current — creating overheating and fire risk invisible to standard phase-only breaker monitoring.
+
+PowerSentry-DC addresses both gaps on the Microchip PolarFire SoC Icicle Kit (MPFS250T). An 8-channel simultaneous-sampling AD7606 ADC feeds a deterministic FPGA DSP pipeline that recalculates sliding half-cycle RMS on every sample (10.24 kS/s), comparing live voltage against ITIC/SEMI-F47 curves and triggering a sub-10-microsecond hardware interrupt for protective shedding or UPS transfer before servers crash. A parallel 1024-point FFT pipeline computes harmonics to the 63rd order, true THD, and dynamic transformer K-factor, while directional harmonic power flow distinguishes utility-side pollution from internally generated server harmonics. Pre/post-fault waveforms are captured via on-chip LSRAM and DMA-streamed to LPDDR4 for forensic review.
+
+A RISC-V AMP subsystem splits work cleanly: one FreeRTOS core handles deterministic event logging and Modbus-TCP for SCADA/PLC integration, while Linux cores host a web dashboard and MQTT gateway. Estimated FPGA resource utilization is under 10% across logic and DSP blocks, indicating strong feasibility within the contest timeline, with total additional prototype hardware cost under $40.
 
 ---
 
-## 📊 FPGA Hardware Resource Budget (MPFS250T)
+## 💡 Innovation & Expected Impact
 
-The design is targeted for the **Microchip PolarFire SoC Icicle Kit (`MPFS250T-FCVG484E`)**:
+Commercial Class A power-quality analyzers rely on sequential microcontroller or multi-chip DSP+MCU architectures that struggle to sustain simultaneous multi-channel sampling, sliding RMS, FFT decomposition, and continuous oscillography without buffer overruns — and typically cost thousands of dollars per monitoring point, limiting deployment to a few shared panels per facility.
+
+PowerSentry-DC's innovation is architectural: implementing the full DSP pipeline as deterministic, zero-jitter hardware logic on PolarFire's FPGA fabric, rather than software on a sequential processor, achieves hard real-time, sub-10-microsecond fault response at an embedded, low-cost footprint (under $40 in additional hardware beyond the kit). This shifts power-quality monitoring from a handful of expensive, centrally located instruments toward dense, per-rack or per-PDU deployment.
+
+A key differentiator is directional harmonic active-power-flow calculation, which distinguishes utility-grid-origin pollution from internally generated server harmonics — letting facilities teams pinpoint root cause rather than merely detect symptoms, a diagnostic capability standard panel meters lack. Validation combines a Python/NumPy golden model of the IEC 61000-4-30 formulas (targeting agreement within 0.1% of the reference), recorded real-world fault playback (COMTRADE/PQDIF), and physical low-voltage benchtop testing — demonstrating rigor without requiring live high-voltage facility access.
+
+Potential impact spans preventing costly multi-rack reboot events, reducing neutral-conductor fire risk, extending transformer life through K-factor-aware load management, and enabling facility-wide power-quality visibility at a fraction of traditional analyzer cost — directly scalable to every modern high-density data center, semiconductor fab, and industrial microgrid.
+
+---
+
+## 📊 Hardware Resource Utilization (MPFS250T)
+
+Targeted for the **Microchip PolarFire SoC Icicle Kit (`MPFS250T-FCVG484E`)**:
 
 | Resource Type | Available on Device | Used by PowerSentry-DC | Utilization % | Feasibility Status |
 | :--- | :---: | :---: | :---: | :---: |
@@ -91,32 +56,14 @@ The design is targeted for the **Microchip PolarFire SoC Icicle Kit (`MPFS250T-F
 
 ---
 
-## 🧪 Safe Benchtop Verification Strategy (Zero Live DC Access Needed)
+## 🧪 Verification & Testing Strategy
 
-Judges and evaluators can verify PowerSentry-DC completely within an academic lab or desktop environment without dangerous high voltages:
+Judges and evaluators can verify PowerSentry-DC completely within a laboratory or desktop environment without requiring access to live high-voltage data centers:
 
-1. **Python Golden Model (`simulation/`):** Double-precision reference model validating IEC 61000-4-30 formulas and ITIC boundaries against Libero ModelSim RTL simulations with **< 0.1% error**.
-2. **On-Chip HIL Playback:** Pre-stored real data center IEEE COMTRADE disturbance records compiled into FPGA block ROM. Board push-buttons (SW1–SW4) simulate 5-cycle sags, capacitor switching spikes, and neutral current surges on demand.
-3. **Safe Low-Voltage Hardware Testbench:** An off-the-shelf **AD7606 8-channel ADC module (~$15)** connects to the 40-pin header, driven by a safe 12V AC step-down transformer and miniature diode-bridge non-linear load.
-4. **End-to-End Live Dashboard:** Dual Gigabit Ethernet streams real-time phasors, harmonic bars, and ITIC curve status to any modern web browser via WebSockets.
-
----
-
-## 📁 Repository Directory Structure
-
-```
-Power-Sentry/
-├── docs/
-│   ├── PROPOSAL.md                  # Comprehensive formal technical proposal
-│   ├── SYSTEM_BLOCK_DIAGRAM.pdf     # Publication-grade vector architecture diagram (PDF)
-│   └── SYSTEM_BLOCK_DIAGRAM.png     # High-resolution raster architecture diagram (PNG)
-├── simulation/                      # Python Golden Model & waveform test vector generators (Upcoming)
-├── hdl/                             # Verilog / SmartHLS RTL modules (Libero SoC) (Upcoming)
-├── firmware/                        # FreeRTOS Core 1 & Linux user-space applications (Upcoming)
-├── .gitignore
-├── LICENSE                          # MIT License
-└── README.md                        # Project documentation & overview
-```
+1. **Python Golden Model:** Double-precision reference model validating IEC 61000-4-30 formulas and ITIC boundaries against ModelSim RTL simulations targeting < 0.1% error.
+2. **On-Chip HIL Playback:** Pre-stored real data center IEEE COMTRADE disturbance records compiled into FPGA block ROM. Board push-buttons simulate 5-cycle sags, capacitor switching spikes, and neutral current surges on demand.
+3. **Safe Low-Voltage Hardware Testbench:** An off-the-shelf AD7606 8-channel ADC module (~$15) connects to the 40-pin header, driven by a safe 12V AC step-down transformer and miniature diode-bridge non-linear load.
+4. **End-to-End Live Dashboard:** Dual Gigabit Ethernet streams real-time phasors, harmonic bars, and ITIC curve status via WebSockets.
 
 ---
 
@@ -131,13 +78,14 @@ Power-Sentry/
 
 ---
 
-## 📝 Contest Submission Details
+## 📝 Proposal Documentation & Contest Details
 
 * **Organizers:** Microchip Technology Inc. & DigiKey
 * **Competition:** PolarFire® FPGA Design Contest 2026–27
 * **Track:** Track 2: Connected Real-Time Systems
 * **Target Hardware:** PolarFire® SoC Icicle Kit (`MPFS-ICICLE-KIT-ES` / `MPFS250T`)
-* **Proposal Documentation:** See [`docs/PROPOSAL.md`](docs/PROPOSAL.md) for complete technical architecture.
+* **Supplemental Proposal Document:** See [**`docs/PROPOSAL.md`**](docs/PROPOSAL.md) for the complete formal engineering proposal.
+* **Architecture Diagram:** See [**`docs/SYSTEM_BLOCK_DIAGRAM.pdf`**](docs/SYSTEM_BLOCK_DIAGRAM.pdf).
 
 ---
 
