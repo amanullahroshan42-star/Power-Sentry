@@ -108,7 +108,6 @@ Judges and evaluators can verify PowerSentry-DC completely within an academic la
 Power-Sentry/
 ├── docs/
 │   ├── PROPOSAL.md                  # Comprehensive formal technical proposal
-│   ├── PORTAL_SUBMISSION_GUIDE.md   # Copy-paste fields with strict word counts for contest portal
 │   ├── SYSTEM_BLOCK_DIAGRAM.pdf     # Publication-grade vector architecture diagram (PDF)
 │   └── SYSTEM_BLOCK_DIAGRAM.png     # High-resolution raster architecture diagram (PNG)
 ├── scripts/
@@ -118,7 +117,7 @@ Power-Sentry/
 ├── firmware/                        # FreeRTOS Core 1 & Linux user-space applications (Upcoming)
 ├── .gitignore
 ├── LICENSE                          # MIT License
-└── README.md                        # Project documentation & portal overview
+└── README.md                        # Project documentation & overview
 ```
 
 ---
@@ -140,7 +139,7 @@ Power-Sentry/
 * **Competition:** PolarFire® FPGA Design Contest 2026–27
 * **Track:** Track 2: Connected Real-Time Systems
 * **Target Hardware:** PolarFire® SoC Icicle Kit (`MPFS-ICICLE-KIT-ES` / `MPFS250T`)
-* **Portal Submission Reference:** See [`docs/PORTAL_SUBMISSION_GUIDE.md`](docs/PORTAL_SUBMISSION_GUIDE.md) for fillable portal entries.
+* **Proposal Documentation:** See [`docs/PROPOSAL.md`](docs/PROPOSAL.md) for complete technical architecture.
 
 ---
 
