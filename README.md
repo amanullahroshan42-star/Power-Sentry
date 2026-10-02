@@ -110,8 +110,6 @@ Power-Sentry/
 │   ├── PROPOSAL.md                  # Comprehensive formal technical proposal
 │   ├── SYSTEM_BLOCK_DIAGRAM.pdf     # Publication-grade vector architecture diagram (PDF)
 │   └── SYSTEM_BLOCK_DIAGRAM.png     # High-resolution raster architecture diagram (PNG)
-├── scripts/
-│   └── generate_diagram.py          # Python matplotlib generator for block diagrams
 ├── simulation/                      # Python Golden Model & waveform test vector generators (Upcoming)
 ├── hdl/                             # Verilog / SmartHLS RTL modules (Libero SoC) (Upcoming)
 ├── firmware/                        # FreeRTOS Core 1 & Linux user-space applications (Upcoming)
